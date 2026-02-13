@@ -1,0 +1,7 @@
+*.pdf
+*.pyc
+__pycache__/
+.DS_Store
+venv/
+dist/
+*.egg-info/
