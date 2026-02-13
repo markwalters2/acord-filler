@@ -1,0 +1,14 @@
+{
+    "agency_name": "Acme Insurance Agency LLC",
+    "agency_address_1": "100 Broadway, Suite 500",
+    "agency_address_2": "New York, NY 10005",
+    "contact_name": "Jane Smith",
+    "email": "jane.smith@acmeinsurance.com",
+    "insured_name": "Example Corp LLC",
+    "carrier": "Example Insurance Company",
+    "naic_code": "77777",
+    "policy_number": "POL-0000000",
+    "from_date": "01/01/2023",
+    "to_date": "02/13/2026",
+    "applicant_name": "John Doe, President"
+}
