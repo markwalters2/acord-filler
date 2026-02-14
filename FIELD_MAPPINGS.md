@@ -560,3 +560,254 @@ python acord_filler.py --form your-blank.pdf --list-fields
 ```
 
 This will print every field name, type, and page number.
+
+---
+
+# ACORD 27 Field Mappings
+
+**Form:** Commercial Automobile Section  
+**Total Fields:** 51  
+**Pages:** 1
+
+## Header & Contact Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Company[0]` | Text | Insurance company name |
+| `F[0].P1[0].Date[0]` | Text | Form completion date |
+| `F[0].P1[0].Phone[0]` | Text | Contact phone number |
+| `F[0].P1[0].Fax[0]` | Text | Contact fax number |
+
+## Location Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].LOC[0]` | Text | Primary location address line 1 |
+| `F[0].P1[0].LOC1[0]` | Text | Location address line 2 |
+| `F[0].P1[0].LOC2[0]` | Text | Location address line 3 |
+| `F[0].P1[0].LOC3[0]` | Text | Location address line 4 |
+| `F[0].P1[0].LOC4[0]` | Text | Location address line 5 |
+| `F[0].P1[0].LOC5[0]` | Text | Location address line 6 |
+| `F[0].P1[0].LOC6[0]` | Text | Location address line 7 |
+| `F[0].P1[0].LOC7[0]` | Text | Location address line 8 |
+
+## Vehicle & Coverage Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].NOAUTOS[0]` | Text | Number of autos/vehicles |
+| `F[0].P1[0].COVERAGE1[0]` | Text | Primary coverage type |
+| `F[0].P1[0].COVERAGE11[0]` | Text | Secondary coverage type |
+| `F[0].P1[0].COVERAGE12[0]` | Text | Additional coverage type |
+
+## Coverage Amounts & Deductibles (Array Fields)
+
+**Amount of Insurance** - 8 fields indexed [0] through [7]:
+
+| Field Name | Description |
+|---|---|
+| `F[0].P1[0].amtinsur[0-7]` | Coverage limit amounts |
+
+**Deductibles** - 8 fields indexed [0] through [7]:
+
+| Field Name | Description |
+|---|---|
+| `F[0].P1[0].deduct[0-7]` | Deductible amounts |
+
+**Covered Perils** - 8 fields indexed [0] through [7]:
+
+| Field Name | Description |
+|---|---|
+| `F[0].P1[0].covperils1[0-7]` | Perils covered (e.g., Comprehensive, Collision, Specified) |
+
+## Dates
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Date1[0]` | Text | Policy effective date |
+| `F[0].P1[0].Date2[0]` | Text | Policy expiration date |
+| `F[0].P1[0].Date3[0]` | Text | Additional date field |
+
+## Additional Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].addlint[0]` | Text | Additional interests/insured parties |
+| `F[0].P1[0].remarks[0]` | Text | Remarks and additional information |
+
+## CA Symbols (Checkboxes)
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].CASymbols21[0]` | CheckBox | CA Symbol 21 |
+| `F[0].P1[0].CASymbols211[0]` | CheckBox | CA Symbol 21 variant 1 |
+| `F[0].P1[0].CASymbols212[0]` | CheckBox | CA Symbol 21 variant 2 |
+| `F[0].P1[0].CASymbols213[0]` | CheckBox | CA Symbol 21 variant 3 |
+| `F[0].P1[0].CASymbols214[0]` | CheckBox | CA Symbol 21 variant 4 |
+
+## Utility Fields
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].ClearAll[0]` | Button | Form clear button (ignore) |
+
+---
+
+# ACORD 28 Field Mappings
+
+**Form:** Evidence of Commercial Property Insurance  
+**Total Fields:** 120  
+**Pages:** 2
+
+> **Important:** ACORD 28 should be filled **per location**. Each location with different coverages, limits, or mortgagees should have its own ACORD 28 form.
+
+## Page 1 — Primary Information
+
+### Producer/Agent Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Company[0]` | Text | Insurance company name |
+| `F[0].P1[0].Producer[0]` | Text | Producer/agency name |
+| `F[0].P1[0].Contact[0]` | Text | Producer contact person |
+| `F[0].P1[0].Phone[0]` | Text | Producer phone |
+| `F[0].P1[0].Fax[0]` | Text | Producer fax |
+| `F[0].P1[0].Email[0]` | Text | Producer email |
+| `F[0].P1[0].AgencyID[0]` | Text | Agency ID number |
+| `F[0].P1[0].Agent[0]` | Text | Lender servicing agent (leave blank unless actual lender agent) |
+| `F[0].P1[0].Code[0]` | Text | Producer code |
+| `F[0].P1[0].Subcode[0]` | Text | Producer subcode |
+| `F[0].P1[0].Naic[0]` | Text | NAIC code |
+
+### Policy Information
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Policy[0]` | Text | Policy number |
+| `F[0].P1[0].Type[0]` | Text | Policy type |
+| `F[0].P1[0].Date[0]` | Text | Form completion date |
+| `F[0].P1[0].Date1[0]` | Text | Policy effective date |
+| `F[0].P1[0].Date2[0]` | Text | Policy expiration date |
+| `F[0].P1[0].Date3[0]` | Text | Additional date field |
+| `F[0].P1[0].Days[0]` | Text | Number of days |
+
+### Insured & Location
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Named[0]` | Text | Named insured |
+| `F[0].P1[0].Location[0]` | Text | Property location address (multi-line) |
+| `F[0].P1[0].LOC21[0]` | Text | Additional location info |
+
+### Mortgagee/Loss Payee
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].NameAdd[0]` | Text | Mortgagee name and address |
+| `F[0].P1[0].Loan[0]` | Text | Loan/mortgage number |
+
+### Coverage Limits
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Limit1[0]` | Text | Building limit |
+| `F[0].P1[0].Limit2[0]` | Text | BPP limit |
+| `F[0].P1[0].Limit3[0]` | Text | Business Income/Extra Expense |
+| `F[0].P1[0].Limit4[0]` | Text | Additional limit |
+| `F[0].P1[0].Limit6[0]` | Text | Additional limit |
+| `F[0].P1[0].Limit7[0]` | Text | Additional limit |
+| `F[0].P1[0].Limit8[0]` | Text | Additional limit |
+| `F[0].P1[0].Limit9[0]` | Text | Additional limit |
+| `F[0].P1[0].Amount[0]` | Text | Total amount of insurance |
+| `F[0].P1[0].Value[0]` | Text | Property value |
+
+### Deductibles
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Deductible[0]` | Text | Primary deductible |
+| `F[0].P1[0].Deductible2[0]` | Text | Secondary deductible |
+| `F[0].P1[0].Ded3[0]` | Text | Deductible 3 |
+| `F[0].P1[0].Ded4[0]` | Text | Deductible 4 |
+| `F[0].P1[0].Ded5[0]` | Text | Deductible 5 |
+| `F[0].P1[0].Ded6[0]` | Text | Deductible 6 |
+| `F[0].P1[0].Ded7[0]` | Text | Deductible 7 |
+| `F[0].P1[0].Ded8[0]` | Text | Deductible 8 |
+| `F[0].P1[0].Percent[0]` | Text | Percentage deductible |
+
+### Business Income
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Months[0]` | Text | Business income months (use for ALS without dollar cap) |
+
+### Other/Additional
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].Other[0]` | Text | Other coverage info |
+| `F[0].P1[0].Other2[0]` | Text | Other coverage info |
+| `F[0].P1[0].Other3[0]` | Text | Other coverage info |
+| `F[0].P1[0].Additional[0]` | Text | Additional information |
+
+## Checkboxes (Page 1)
+
+**Key Checkbox Mappings:**
+
+| Field Name | Purpose |
+|---|---|
+| `F[0].P1[0].Check4[0]` | Perils: Basic |
+| `F[0].P1[0].Check5[0]` | Perils: Broad |
+| `F[0].P1[0].Check6[0]` | Perils: Special |
+| `F[0].P1[0].Check7[0]` | Perils: Other |
+| `F[0].P1[0].Check8[0]` | Business Income (vs Rental Value) |
+| `F[0].P1[0].Check9[0]` | Rental Value (vs Business Income) |
+
+**Coverage YES/NO/N-A Pattern:**
+
+Many coverages follow a three-checkbox pattern at specific x-coordinates:
+- **YES** = Check box at x:262
+- **NO** = Check box at x:276
+- **N/A** = Check box at x:290
+
+The checkboxes are numbered Check1 through Check70, with Check80 as an additional box. Specific mappings depend on form layout and should be validated against your blank form version.
+
+**All Checkboxes:**
+
+`Check1` through `Check70`, plus `Check80` (70+ checkbox fields total)
+
+## Page 2 — Remarks
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P2[0].Evidence[0]` | Text | Evidence of insurance remarks (large text field) |
+
+## Utility Fields
+
+| Field Name | Type | Description |
+|---|---|---|
+| `F[0].P1[0].ClearAll[0]` | Button | Page 1 form clear button (ignore) |
+| `F[0].P2[0].ClearAll[0]` | Button | Page 2 form clear button (ignore) |
+
+## Signature Placement (Manual Overlay)
+
+When adding signatures programmatically after flattening:
+
+- **ACORD 28 signature position:** x:420, y:722, h:20 (Authorized Representative line)
+- Place signature image file at this coordinate after PDF is flattened
+
+## Manual Checkbox Coordinates
+
+Some checkboxes may require manual drawing if not properly mapped:
+
+- **Building checkbox:** center (357, 252) — draw X with sz=4, width=1.2
+- **BPP checkbox:** center (441, 252) — draw X with sz=4, width=1.2
+
+## Notes
+
+- ACORD 28 checkbox field names (Check1-Check70) are generic and positions vary by form edition
+- Always validate checkbox mappings against your specific blank form version
+- Use `fill_acord.py list acord-28-blank.pdf` to inspect field positions
+- Agent[0] field is for "Lender Servicing Agent" — leave blank unless there's an actual bank/lender servicing agent
+- **BI months rule:** Use Months field only for Actual Loss Sustained coverage without a dollar cap; otherwise use Limit3
+

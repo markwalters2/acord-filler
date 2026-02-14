@@ -12,6 +12,9 @@ Stop hand-filling ACORD forms. Feed in JSON, get back a flattened, OCR'd PDF rea
 | **ACORD 25** | Certificate of Liability Insurance | `fill_acord25.py` | 128 |
 | **ACORD 24** | Certificate of Property Insurance | `fill_acord24.py` | 144 |
 | **ACORD 37** | Statement of No Loss | `fill_acord37.py` | 30 |
+| **ACORD 27** | Commercial Automobile Section | `fill_acord.py` | 51 |
+| **ACORD 28** | Evidence of Commercial Property Insurance | `fill_acord.py` | 120 |
+| **ACORD 50** | Real Estate Management & Lessor's Risk Report | `fill_acord.py` | varies |
 
 ## Features
 
@@ -49,6 +52,21 @@ python fill_acord37.py --input data.json --form acord-37-blank.pdf --output nkll
 ### Commercial Application (ACORD 125/140)
 ```bash
 python acord_filler.py --input data.json --form acord-125-140-blank.pdf --output application.pdf
+```
+
+### Commercial Auto Section (ACORD 27)
+```bash
+python fill_acord.py fill --blank acord-27-blank.pdf --data example_acord27.json --output auto_cert.pdf --flatten
+```
+
+### Evidence of Property Insurance (ACORD 28)
+```bash
+python fill_acord.py fill --blank acord-28-blank.pdf --data example_acord28.json --output evidence.pdf --flatten
+```
+
+### Real Estate Report (ACORD 50)
+```bash
+python fill_acord.py fill --blank acord-50-blank.pdf --data property_data.json --output report.pdf --flatten
 ```
 
 ## Python API
@@ -89,19 +107,19 @@ The commercial application has several quirks documented in FIELD_MAPPINGS.md:
 | File | Purpose |
 |------|---------|
 | `acord_filler.py` | ACORD 125/140 commercial application filler |
+| `fill_acord.py` | General-purpose ACORD form filler (27, 28, 50, etc.) |
 | `fill_acord25.py` | ACORD 25 certificate of liability filler |
 | `fill_acord24.py` | ACORD 24 certificate of property filler |
 | `fill_acord37.py` | ACORD 37 statement of no loss filler |
 | `FIELD_MAPPINGS.md` | Complete field name reference (all forms) |
+| `RULES.md` | Best practices guide for ACORD form filling |
 | `example_input.json` | Example data for ACORD 125/140 |
 | `example_acord25.json` | Example data for ACORD 25 |
 | `example_acord24.json` | Example data for ACORD 24 |
 | `example_acord37.json` | Example data for ACORD 37 |
+| `example_acord27.json` | Example data for ACORD 27 |
+| `example_acord28.json` | Example data for ACORD 28 |
 | `acord37_mappings.json` | ACORD 37 field position reference |
-
-## Built By
-
-[Alliance Risk Insurance Services LLC](https://joinalliancerisk.com)
 
 ## License
 
