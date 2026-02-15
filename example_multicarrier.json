@@ -1,0 +1,87 @@
+{
+  "insured": {
+    "name": "Acme Construction LLC",
+    "address_line1": "123 Builder Way",
+    "address_line2": "Suite 400",
+    "city": "Chicago",
+    "state": "IL",
+    "zip": "60601"
+  },
+  "insurers": [
+    { "letter": "A", "carrier": "Hartford Fire Insurance Co", "naic": "19682" },
+    { "letter": "B", "carrier": "Travelers Indemnity Co", "naic": "25658" },
+    { "letter": "C", "carrier": "Zurich American Insurance Co", "naic": "16535" },
+    { "letter": "D", "carrier": "EMPLOYERS Insurance Co", "naic": "10640" }
+  ],
+  "coverages": {
+    "gl": {
+      "has": true,
+      "insurer_letter": "A",
+      "policy_number": "GL-2026-001234",
+      "effective_date": "01/01/2026",
+      "expiration_date": "01/01/2027",
+      "occurrence_limit": "1,000,000",
+      "aggregate_limit": "2,000,000",
+      "fire_damage_limit": "100,000",
+      "med_exp_limit": "5,000",
+      "personal_adv_limit": "1,000,000",
+      "products_completed_limit": "2,000,000",
+      "claims_made": false,
+      "occurrence": true
+    },
+    "auto": {
+      "has": true,
+      "insurer_letter": "B",
+      "policy_number": "CA-2026-005678",
+      "effective_date": "03/15/2026",
+      "expiration_date": "03/15/2027",
+      "combined_single_limit": "1,000,000",
+      "any_auto": false,
+      "hired": true,
+      "non_owned": true
+    },
+    "umbrella": {
+      "has": true,
+      "insurer_letter": "C",
+      "policy_number": "UMB-2026-009012",
+      "effective_date": "01/01/2026",
+      "expiration_date": "01/01/2027",
+      "each_occurrence": "5,000,000",
+      "aggregate": "5,000,000"
+    },
+    "workers_comp": {
+      "has": true,
+      "insurer_letter": "D",
+      "policy_number": "WC-2026-003456",
+      "effective_date": "07/01/2025",
+      "expiration_date": "07/01/2026",
+      "statutory": true,
+      "el_each_accident": "1,000,000",
+      "el_disease_each": "1,000,000",
+      "el_disease_policy": "1,000,000"
+    }
+  },
+  "cert_holder": {
+    "name": "Riverside Property Management Inc",
+    "address_line1": "500 Lakeshore Drive",
+    "address_line2": "Floor 12",
+    "city": "Chicago",
+    "state": "IL",
+    "zip": "60611",
+    "additional_insured": true,
+    "waiver_of_subrogation": true,
+    "primary_noncontributory": true,
+    "additional_description": "Re: Contract #2026-4521 — General construction services at 500 Lakeshore Drive"
+  },
+  "agency": {
+    "name": "Your Insurance Agency LLC",
+    "address_line1": "456 Commerce Blvd",
+    "address_line2": "Suite 200",
+    "city": "Austin",
+    "state": "TX",
+    "zip": "78701",
+    "contact": "Sarah Mitchell",
+    "phone": "(512) 555-0199",
+    "email": "sarah@youragency.com"
+  }
+}
