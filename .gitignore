@@ -1,6 +1,9 @@
+telemetry.db
+data/
+DancingScript.ttf
+auth.py
+mark-walters-signature.jpg
 __pycache__/
 *.pyc
-*.pyo
-output/
-*.pdf.bak
-mark-walters-signature.jpg
+*.bak
+*.bak2
