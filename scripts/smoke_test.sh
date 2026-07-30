@@ -25,9 +25,42 @@ policy='{"insured":{"name":"Smoke Test LLC","address_line1":"1 Test Way","city":
 holder='{"name":"Smoke Test Holder","address_line1":"2 Holder Way","city":"Testville","state":"IL","zip":"60000"}'
 
 output="$(mktemp -t acord-smoke-XXXXXX.pdf)"
-trap 'rm -f "$output"' EXIT
+headers="$(mktemp -t acord-smoke-headers-XXXXXX)"
+generation_id=""
+
+cleanup() {
+  rm -f "$output" "$headers"
+  if [[ -n "$generation_id" ]]; then
+    python3 - "$APP_DIR" "$generation_id" <<'PY'
+import sqlite3
+import sys
+from pathlib import Path
+
+app_dir = Path(sys.argv[1]).resolve()
+generated_dir = (app_dir / "data" / "generated").resolve()
+db_path = app_dir / "data" / "telemetry.db"
+generation_id = sys.argv[2]
+
+with sqlite3.connect(db_path) as db:
+    row = db.execute(
+        "SELECT request_id, output_path FROM generations WHERE id = ?",
+        (generation_id,),
+    ).fetchone()
+    if row:
+        request_id, output_path = row
+        db.execute("DELETE FROM generations WHERE id = ?", (generation_id,))
+        db.execute("DELETE FROM requests WHERE id = ?", (request_id,))
+        db.commit()
+        path = Path(output_path).resolve()
+        if generated_dir in path.parents and path.is_file():
+            path.unlink()
+PY
+  fi
+}
+trap cleanup EXIT
 
 curl -fsS \
+  -D "$headers" \
   -H "x-api-key: $ACORD_API_KEY" \
   -F "form_type=25" \
   -F "policy_data=$policy" \
@@ -36,6 +69,9 @@ curl -fsS \
   -F "flatten=false" \
   "$BASE_URL/api/generate" \
   -o "$output"
+
+generation_id="$(awk -F': ' 'tolower($1) == "x-generation-id" {gsub("\r", "", $2); print $2}' "$headers" | tail -1)"
+[[ -n "$generation_id" ]]
 
 python3 - "$output" <<'PY'
 import pathlib
