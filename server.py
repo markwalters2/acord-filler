@@ -51,7 +51,7 @@ API_KEY = os.getenv("ACORD_API_KEY", "")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
-OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4.1-mini")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "google/gemma-4-31b-it:free")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.getenv("ACORD_DB_PATH", os.path.join(DATA_DIR, "telemetry.db"))
@@ -371,7 +371,7 @@ Only include coverages that are actually present. Set "has": false for coverages
                     },
                     json={
                         "model": OPENROUTER_MODEL,
-                        "max_tokens": 4096,
+                        "max_tokens": 2048,
                         "messages": [{"role": "user", "content": openrouter_content}],
                     },
                 )
