@@ -51,8 +51,8 @@ fi
 
 systemctl daemon-reload
 nginx -t
-systemctl enable --now acord-api.service acord-api-backup.timer
-systemctl reload nginx
+systemctl enable --now acord-api.service acord-api-backup.timer nginx.service
+systemctl reload nginx.service
 
 "$APP_DIR/scripts/smoke_test.sh" "http://127.0.0.1:18080"
 echo "ACORD API deployment passed semantic health and generation checks"
