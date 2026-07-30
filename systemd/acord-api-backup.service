@@ -1,0 +1,8 @@
+[Unit]
+Description=Back up ACORD telemetry and generated files
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/acord-api-backup
+User=root
+Group=root

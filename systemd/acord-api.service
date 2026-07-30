@@ -1,0 +1,23 @@
+[Unit]
+Description=Alliance Risk ACORD API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/root/acord-api
+EnvironmentFile=/root/acord-api/.env
+ExecStart=/root/acord-api/.venv/bin/uvicorn server:app --host 127.0.0.1 --port 18080 --workers 1
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=20
+User=root
+Group=root
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/root/acord-api/data /root/acord-api/backups
+
+[Install]
+WantedBy=multi-user.target

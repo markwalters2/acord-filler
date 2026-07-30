@@ -4,6 +4,8 @@ ACORD Certificate Generator API v2 — Full Telemetry Edition
 Every request, every file, every error — captured for training data.
 """
 
+from __future__ import annotations
+
 import os
 import json
 import uuid
@@ -12,7 +14,9 @@ import tempfile
 import time
 import traceback
 import hashlib
+import hmac
 import sqlite3
+import re
 from datetime import datetime, timezone
 from typing import Optional
 from contextlib import contextmanager
@@ -23,21 +27,32 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, JSONResponse
 import httpx
 
-app = FastAPI(title="ACORD Certificate Generator API v2")
+APP_VERSION = "2.1.0"
+SCHEMA_VERSION = 2
+app = FastAPI(title="ACORD Certificate Generator API v2", version=APP_VERSION)
 
+_allowed_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "ACORD_ALLOWED_ORIGINS",
+        "https://acord-demo.vercel.app,http://localhost:3000",
+    ).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-API_KEY = os.getenv("ACORD_API_KEY", "acord-demo-2026")
+API_KEY = os.getenv("ACORD_API_KEY", "")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-DB_PATH = os.path.join(DATA_DIR, "telemetry.db")
+DB_PATH = os.getenv("ACORD_DB_PATH", os.path.join(DATA_DIR, "telemetry.db"))
 BLANK_FORMS = {
     "25": os.path.join(BASE_DIR, "acord-25-blank.pdf"),
     "24": os.path.join(BASE_DIR, "acord-24-blank.pdf"),
@@ -226,8 +241,15 @@ def log_error(request_id: str, endpoint: str, error_type: str, message: str,
 # ── Auth ──
 
 def check_auth(x_api_key: str = Header(None)):
-    if x_api_key != API_KEY:
+    if not API_KEY or not x_api_key or not hmac_compare(x_api_key, API_KEY):
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+
+def hmac_compare(left: str, right: str) -> bool:
+    return hmac.compare_digest(
+        hashlib.sha256(left.encode()).digest(),
+        hashlib.sha256(right.encode()).digest(),
+    )
 
 
 # ── PDF Functions ──
@@ -306,7 +328,7 @@ Only include coverages that are actually present. Set "has": false for coverages
                 resp = await client.post(
                     "https://api.anthropic.com/v1/messages",
                     headers={"x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                    json={"model": "claude-sonnet-4-20250514", "max_tokens": 4096, "messages": messages},
+                    json={"model": ANTHROPIC_MODEL, "max_tokens": 4096, "messages": messages},
                 )
             if resp.status_code == 200:
                 result = resp.json()
@@ -316,72 +338,49 @@ Only include coverages that are actually present. Set "has": false for coverages
         except Exception as e:
             pass
 
-    # Fallback: resolve fresh token from openclaw auth system
-    if not resp_ok:
-        import subprocess as _sp
-        try:
-            _proc = _sp.run(
-                ["bash", "-c", """source /root/.nvm/nvm.sh && nvm use 22 >/dev/null 2>&1 && node -e "
-const { resolveProviderAuth } = require('openclaw/dist/auth/resolve.js');
-resolveProviderAuth('anthropic').then(r => console.log(r.token || r.apiKey || '')).catch(() => process.exit(1));
-" 2>/dev/null || openclaw health --json 2>/dev/null | python3 -c "import sys,json; print('')" """],
-                capture_output=True, text=True, timeout=15
-            )
-            fresh_key = _proc.stdout.strip()
-        except Exception:
-            fresh_key = ""
-        
-        if not fresh_key:
-            # Last resort: read from auth-profiles and try anyway
-            try:
-                import json as _json
-                with open("/root/.openclaw/agents/main/agent/auth-profiles.json") as _f:
-                    _ap = _json.load(_f)
-                fresh_key = _ap.get("profiles", {}).get("anthropic:default", {}).get("token", "")
-            except Exception:
-                fresh_key = ""
-
-        if fresh_key:
-            try:
-                async with httpx.AsyncClient(timeout=60) as client:
-                    resp = await client.post(
-                        "https://api.anthropic.com/v1/messages",
-                        headers={"x-api-key": fresh_key, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-                        json={"model": "claude-sonnet-4-20250514", "max_tokens": 4096, "messages": messages},
-                    )
-                if resp.status_code == 200:
-                    result = resp.json()
-                    ai_text_result = result["content"][0]["text"]
-                    usage = result.get("usage", {})
-                    usage["auth_method"] = "openclaw_fallback"
-                    resp_ok = True
-                    # Update env so future calls use the fresh key
-                    os.environ["ANTHROPIC_API_KEY"] = fresh_key
-                    globals()["ANTHROPIC_KEY"] = fresh_key
-            except Exception:
-                pass
-
-    # Last fallback: use openclaw CLI directly
-    if not resp_ok:
-        import subprocess as _sp
-        prompt_for_cli = extraction_prompt + "\n\nDocument text:\n" + text[:15000]
-        try:
-            _proc = _sp.run(
-                ["bash", "-c", 'source /root/.nvm/nvm.sh && nvm use 22 >/dev/null 2>&1 && openclaw agent --agent main --local -m "$1"', "_", prompt_for_cli],
-                capture_output=True, text=True, timeout=90
-            )
-            if _proc.returncode == 0 and _proc.stdout.strip():
-                ai_text_result = _proc.stdout.strip()
-                usage = {"auth_method": "openclaw_cli"}
-                resp_ok = True
-        except Exception:
-            pass
-
     ai_duration = (time.time() - ai_start) * 1000
 
     if not resp_ok:
-        return {"raw_text": text, "error": "AI extraction failed: all auth methods exhausted (direct API + openclaw fallback + CLI)",
-                "_meta": {"used_vision": use_vision, "ai_duration_ms": ai_duration}}
+        policy_number = ""
+        policy_match = re.search(
+            r"(?:policy(?:\s+number|\s+no\.?)?|pol(?:icy)?\s*#)\s*[:#-]?\s*([A-Z0-9-]{5,})",
+            text,
+            re.IGNORECASE,
+        )
+        if policy_match:
+            policy_number = policy_match.group(1).strip()
+        date_matches = re.findall(r"\b(?:0?[1-9]|1[0-2])[/.-](?:0?[1-9]|[12]\d|3[01])[/.-](?:20)?\d{2}\b", text)
+        return {
+            "insured": {
+                "name": "",
+                "address_line1": "",
+                "address_line2": "",
+                "city": "",
+                "state": "",
+                "zip": "",
+            },
+            "policy": {
+                "number": policy_number,
+                "effective_date": date_matches[0] if date_matches else "",
+                "expiration_date": date_matches[1] if len(date_matches) > 1 else "",
+                "carrier": "",
+                "naic": "",
+            },
+            "coverages": {
+                "gl": {"has": False},
+                "auto": {"has": False},
+                "umbrella": {"has": False},
+                "workers_comp": {"has": False},
+                "property": {"has": False},
+            },
+            "raw_text": text,
+            "_meta": {
+                "used_vision": use_vision,
+                "text_length": len(text),
+                "ai_model": "deterministic-fallback",
+                "ai_duration_ms": ai_duration,
+            },
+        }
 
     ai_text = ai_text_result
     # Reconstruct result-like object for downstream code
@@ -396,7 +395,7 @@ resolveProviderAuth('anthropic').then(r => console.log(r.token || r.apiKey || ''
         parsed["_meta"] = {
             "used_vision": use_vision,
             "text_length": len(text),
-            "ai_model": "claude-sonnet-4-20250514",
+            "ai_model": ANTHROPIC_MODEL,
             "ai_prompt_tokens": usage.get("input_tokens", 0),
             "ai_completion_tokens": usage.get("output_tokens", 0),
             "ai_duration_ms": ai_duration,
@@ -558,15 +557,37 @@ def map_to_acord25(policy_data: dict, cert_holder: dict, agency: dict) -> dict:
 
 # ── API Endpoints ──
 
+@app.get("/")
 @app.get("/health")
 async def health():
     with get_db() as db:
+        integrity = db.execute("PRAGMA quick_check").fetchone()[0]
+        if integrity != "ok":
+            raise HTTPException(503, f"Database integrity check failed: {integrity}")
+        required_tables = {
+            "requests", "extractions", "generations", "errors", "daily_analysis", "users"
+        }
+        actual_tables = {
+            row[0]
+            for row in db.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            ).fetchall()
+        }
+        missing_tables = sorted(required_tables - actual_tables)
+        if missing_tables:
+            raise HTTPException(503, f"Database schema incomplete: {', '.join(missing_tables)}")
         stats = db.execute("SELECT COUNT(*) as c FROM requests").fetchone()
         extractions = db.execute("SELECT COUNT(*) as c FROM extractions").fetchone()
         generations = db.execute("SELECT COUNT(*) as c FROM generations").fetchone()
         errors = db.execute("SELECT COUNT(*) as c FROM errors").fetchone()
     return {
-        "status": "ok", "service": "acord-api-v2", "forms": list(BLANK_FORMS.keys()),
+        "ok": True,
+        "status": "ok",
+        "service": "acord-api-v2",
+        "version": APP_VERSION,
+        "schema_version": SCHEMA_VERSION,
+        "database": "ok",
+        "forms": sorted(BLANK_FORMS.keys()),
         "stats": {
             "total_requests": stats["c"], "total_extractions": extractions["c"],
             "total_generations": generations["c"], "total_errors": errors["c"],
@@ -600,7 +621,8 @@ async def extract_policy(request: Request, file: UploadFile = File(...), x_api_k
     
     # Save uploaded file
     fhash = file_hash(pdf_bytes)
-    upload_path = os.path.join(DATA_DIR, "uploads", f"{fhash}_{file.filename}")
+    safe_upload_name = os.path.basename(file.filename).replace("\x00", "")
+    upload_path = os.path.join(DATA_DIR, "uploads", f"{fhash}_{safe_upload_name}")
     with open(upload_path, "wb") as f:
         f.write(pdf_bytes)
     
@@ -647,7 +669,7 @@ async def extract_policy(request: Request, file: UploadFile = File(...), x_api_k
                     ai_prompt_tokens, ai_completion_tokens, ai_duration_ms, extracted_data,
                     insured_name, carrier, coverages_found, extraction_quality)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (eid, rid, now_iso(), file.filename, len(pdf_bytes), fhash, upload_path,
+            """, (eid, rid, now_iso(), safe_upload_name, len(pdf_bytes), fhash, upload_path,
                   meta.get("text_length", 0), 1 if meta.get("used_vision") else 0,
                   meta.get("ai_model", ""), meta.get("ai_prompt_tokens", 0),
                   meta.get("ai_completion_tokens", 0), meta.get("ai_duration_ms", 0),
@@ -657,7 +679,7 @@ async def extract_policy(request: Request, file: UploadFile = File(...), x_api_k
         # Save extraction result
         ext_path = os.path.join(DATA_DIR, "extractions", f"{eid}.json")
         with open(ext_path, "w") as f:
-            json.dump({"extraction_id": eid, "request_id": rid, "filename": file.filename,
+            json.dump({"extraction_id": eid, "request_id": rid, "filename": safe_upload_name,
                        "result": result, "meta": meta}, f, indent=2)
         
         if "error" in result:
@@ -762,7 +784,8 @@ async def generate_certificate(
         
         # Save generated cert
         gen_id = str(uuid.uuid4())[:12]
-        gen_filename = f"{gen_id}_ACORD-{form_type}_{holder.get('name', 'cert').replace(' ', '_')}.pdf"
+        safe_holder = re.sub(r"[^A-Za-z0-9._-]+", "_", holder.get("name", "cert"))[:100]
+        gen_filename = f"{gen_id}_ACORD-{form_type}_{safe_holder}.pdf"
         gen_path = os.path.join(DATA_DIR, "generated", gen_filename)
         with open(gen_path, "wb") as f:
             f.write(pdf_bytes)
@@ -806,7 +829,7 @@ async def generate_certificate(
         
         os.remove(output_path)
         
-        filename = f"ACORD-{form_type}-{holder.get('name', 'cert').replace(' ', '_')}-{datetime.now().strftime('%Y%m%d')}.pdf"
+        filename = f"ACORD-{form_type}-{safe_holder}-{datetime.now().strftime('%Y%m%d')}.pdf"
         return Response(
             content=pdf_bytes, media_type="application/pdf",
             headers={
@@ -933,8 +956,9 @@ async def get_file(folder: str, filename: str, x_api_key: str = Header(None)):
     if folder not in ["uploads", "generated", "extractions", "errors"]:
         raise HTTPException(400, "Invalid folder")
     
-    fp = os.path.join(DATA_DIR, folder, filename)
-    if not os.path.exists(fp):
+    folder_path = os.path.realpath(os.path.join(DATA_DIR, folder))
+    fp = os.path.realpath(os.path.join(folder_path, filename))
+    if not fp.startswith(folder_path + os.sep) or not os.path.isfile(fp):
         raise HTTPException(404, "File not found")
     
     with open(fp, "rb") as f:
@@ -957,13 +981,23 @@ from auth import (
 # Init users table on startup
 init_users_db()
 
-# Create default admin if no users exist
+# Bootstrap an administrator only from explicit deployment secrets.
 with sqlite3.connect(DB_PATH) as _conn:
     _conn.row_factory = sqlite3.Row
     _count = _conn.execute("SELECT COUNT(*) as c FROM users").fetchone()["c"]
     if _count == 0:
-        create_user("admin", "Alliance2026!", email="mark.walters@joinalliancerisk.com", display_name="Mark Walters", is_admin=True)
-        print("✅ Created default admin user: admin / Alliance2026!")
+        _admin_password = os.getenv("ACORD_ADMIN_PASSWORD", "")
+        if _admin_password:
+            create_user(
+                os.getenv("ACORD_ADMIN_USERNAME", "admin"),
+                _admin_password,
+                email=os.getenv("ACORD_ADMIN_EMAIL", ""),
+                display_name=os.getenv("ACORD_ADMIN_DISPLAY_NAME", "ACORD Administrator"),
+                is_admin=True,
+            )
+            print("Created ACORD administrator from environment")
+        else:
+            print("No ACORD_ADMIN_PASSWORD set; administrator bootstrap skipped")
 
 
 def get_current_user(request: Request) -> dict | None:
@@ -1006,8 +1040,8 @@ async def register(request: Request):
     
     if not username or not password:
         raise HTTPException(400, "Username and password required")
-    if len(password) < 6:
-        raise HTTPException(400, "Password must be at least 6 characters")
+    if len(password) < 10:
+        raise HTTPException(400, "Password must be at least 10 characters")
     if len(username) < 2:
         raise HTTPException(400, "Username must be at least 2 characters")
     
@@ -1067,8 +1101,8 @@ async def auth_change_password(request: Request):
     old_pw = body.get("old_password", "")
     new_pw = body.get("new_password", "")
     
-    if len(new_pw) < 6:
-        raise HTTPException(400, "New password must be at least 6 characters")
+    if len(new_pw) < 10:
+        raise HTTPException(400, "New password must be at least 10 characters")
     
     if not change_password(user["id"], old_pw, new_pw):
         raise HTTPException(400, "Current password is incorrect")
@@ -1102,14 +1136,18 @@ async def download_certificate(cert_id: str, request: Request):
             if not cert:
                 raise HTTPException(404, "Certificate not found")
         
-        path = cert["output_path"]
-        if not path or not os.path.exists(path):
+        generated_root = os.path.realpath(os.path.join(DATA_DIR, "generated"))
+        path = os.path.realpath(cert["output_path"] or "")
+        if not path.startswith(generated_root + os.sep) or not os.path.isfile(path):
             raise HTTPException(404, "PDF file not found on disk")
         
         with open(path, "rb") as f:
             pdf_bytes = f.read()
         
-        filename = f"ACORD-{cert['form_type']}_{cert['insured_name'].replace(' ', '_')}_{cert['timestamp'][:10]}.pdf"
+        safe_insured = re.sub(
+            r"[^A-Za-z0-9._-]+", "_", cert["insured_name"] or "insured"
+        )[:100]
+        filename = f"ACORD-{cert['form_type']}_{safe_insured}_{cert['timestamp'][:10]}.pdf"
         return Response(
             content=pdf_bytes, media_type="application/pdf",
             headers={"Content-Disposition": f'attachment; filename="{filename}"'}
@@ -1130,8 +1168,8 @@ async def admin_reset_pw(user_id: str, request: Request):
     require_admin(request)
     body = await request.json()
     new_pw = body.get("password", "")
-    if len(new_pw) < 6:
-        raise HTTPException(400, "Password must be at least 6 characters")
+    if len(new_pw) < 10:
+        raise HTTPException(400, "Password must be at least 10 characters")
     admin_reset_password(user_id, new_pw)
     return JSONResponse({"ok": True, "message": "Password reset"})
 
