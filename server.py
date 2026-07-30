@@ -323,6 +323,7 @@ Only include coverages that are actually present. Set "has": false for coverages
     ai_text_result = ""
     usage = {}
     selected_model = ""
+    provider_failures = []
 
     # Try direct Anthropic API first
     if ANTHROPIC_KEY:
@@ -339,8 +340,10 @@ Only include coverages that are actually present. Set "has": false for coverages
                 usage = result.get("usage", {})
                 resp_ok = True
                 selected_model = ANTHROPIC_MODEL
-        except Exception as e:
-            pass
+            else:
+                provider_failures.append(f"anthropic_http_{resp.status_code}")
+        except Exception as exc:
+            provider_failures.append(f"anthropic_{type(exc).__name__}")
 
     if not resp_ok and OPENROUTER_KEY:
         try:
@@ -378,8 +381,16 @@ Only include coverages that are actually present. Set "has": false for coverages
                 usage = result.get("usage", {})
                 resp_ok = True
                 selected_model = OPENROUTER_MODEL
-        except Exception:
-            pass
+            else:
+                try:
+                    message = resp.json().get("error", {}).get("message", "")
+                except Exception:
+                    message = ""
+                provider_failures.append(
+                    f"openrouter_http_{resp.status_code}:{message[:160]}"
+                )
+        except Exception as exc:
+            provider_failures.append(f"openrouter_{type(exc).__name__}")
 
     ai_duration = (time.time() - ai_start) * 1000
 
@@ -422,6 +433,7 @@ Only include coverages that are actually present. Set "has": false for coverages
                 "text_length": len(text),
                 "ai_model": "deterministic-fallback",
                 "ai_duration_ms": ai_duration,
+                "provider_failures": provider_failures,
             },
         }
 
@@ -442,6 +454,7 @@ Only include coverages that are actually present. Set "has": false for coverages
             "ai_prompt_tokens": usage.get("input_tokens", 0),
             "ai_completion_tokens": usage.get("output_tokens", 0),
             "ai_duration_ms": ai_duration,
+            "provider_failures": provider_failures,
         }
         return parsed
     except (ValueError, json.JSONDecodeError) as e:
