@@ -50,6 +50,8 @@ app.add_middleware(
 API_KEY = os.getenv("ACORD_API_KEY", "")
 ANTHROPIC_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 ANTHROPIC_MODEL = os.getenv("ANTHROPIC_MODEL", "claude-sonnet-4-5-20250929")
+OPENROUTER_KEY = os.getenv("OPENROUTER_API_KEY", "")
+OPENROUTER_MODEL = os.getenv("OPENROUTER_MODEL", "openai/gpt-4.1-mini")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 DB_PATH = os.getenv("ACORD_DB_PATH", os.path.join(DATA_DIR, "telemetry.db"))
@@ -320,6 +322,7 @@ Only include coverages that are actually present. Set "has": false for coverages
     resp_ok = False
     ai_text_result = ""
     usage = {}
+    selected_model = ""
 
     # Try direct Anthropic API first
     if ANTHROPIC_KEY:
@@ -335,7 +338,47 @@ Only include coverages that are actually present. Set "has": false for coverages
                 ai_text_result = result["content"][0]["text"]
                 usage = result.get("usage", {})
                 resp_ok = True
+                selected_model = ANTHROPIC_MODEL
         except Exception as e:
+            pass
+
+    if not resp_ok and OPENROUTER_KEY:
+        try:
+            if use_vision:
+                openrouter_content = [{"type": "text", "text": extraction_prompt}]
+                for image in pdf_pages_to_images(pdf_bytes, dpi=150)[:5]:
+                    openrouter_content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/png;base64,{image}"},
+                        }
+                    )
+            else:
+                openrouter_content = (
+                    f"{extraction_prompt}\n\nDocument text:\n{text[:15000]}"
+                )
+            async with httpx.AsyncClient(timeout=90) as client:
+                resp = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {OPENROUTER_KEY}",
+                        "Content-Type": "application/json",
+                        "HTTP-Referer": "https://acord-demo.vercel.app",
+                        "X-Title": "Alliance Risk ACORD Generator",
+                    },
+                    json={
+                        "model": OPENROUTER_MODEL,
+                        "max_tokens": 4096,
+                        "messages": [{"role": "user", "content": openrouter_content}],
+                    },
+                )
+            if resp.status_code == 200:
+                result = resp.json()
+                ai_text_result = result["choices"][0]["message"]["content"]
+                usage = result.get("usage", {})
+                resp_ok = True
+                selected_model = OPENROUTER_MODEL
+        except Exception:
             pass
 
     ai_duration = (time.time() - ai_start) * 1000
@@ -395,7 +438,7 @@ Only include coverages that are actually present. Set "has": false for coverages
         parsed["_meta"] = {
             "used_vision": use_vision,
             "text_length": len(text),
-            "ai_model": ANTHROPIC_MODEL,
+            "ai_model": selected_model or ANTHROPIC_MODEL,
             "ai_prompt_tokens": usage.get("input_tokens", 0),
             "ai_completion_tokens": usage.get("output_tokens", 0),
             "ai_duration_ms": ai_duration,
