@@ -8,9 +8,17 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 install -d -m 700 "$BACKUP_DIR"
 
 if [[ -f "$APP_DIR/data/telemetry.db" ]]; then
-  sqlite3 "$APP_DIR/data/telemetry.db" \
-    ".timeout 15000" \
-    ".backup '$BACKUP_DIR/telemetry-$STAMP.db'"
+  python3 - "$APP_DIR/data/telemetry.db" "$BACKUP_DIR/telemetry-$STAMP.db" <<'PY'
+import sqlite3
+import sys
+
+source = sqlite3.connect(sys.argv[1], timeout=15)
+destination = sqlite3.connect(sys.argv[2])
+with destination:
+    source.backup(destination)
+destination.close()
+source.close()
+PY
 fi
 
 tar -C "$APP_DIR" -czf "$BACKUP_DIR/acord-data-$STAMP.tar.gz" \
