@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -15,4 +16,4 @@ jobs:
           host: ${{ secrets.PAWN_HOST }}
           username: ${{ secrets.PAWN_USER }}
           key: ${{ secrets.PAWN_SSH_KEY }}
-          script: bash /root/acord-api/deploy.sh
+          script: sudo bash /root/acord-api/deploy.sh
